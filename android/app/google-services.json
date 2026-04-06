@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "261823258010",
+    "project_id": "inventory-adrit-inclass12",
+    "storage_bucket": "inventory-adrit-inclass12.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:261823258010:android:df0fbaa113478fa6dd2e23",
+        "android_client_info": {
+          "package_name": "com.example.inventory_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDr__CoxLnHIsddk34mX-Fx190lSPJwqWI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
