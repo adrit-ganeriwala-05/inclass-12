@@ -18,7 +18,6 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
   late TextEditingController _categoryController;
   late TextEditingController _quantityController;
   late TextEditingController _priceController;
-  bool _isLoading = false;
 
   @override
   void initState() {
@@ -43,7 +42,6 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
 
     final newItem = Item(
       name: _nameController.text.trim(),
@@ -52,20 +50,17 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
       price: double.parse(_priceController.text.trim()),
     );
 
+    // Pop first, then save — instant navigation regardless of network
+    Navigator.pop(context);
+
     try {
       if (widget.item == null) {
         await widget.service.addItem(newItem);
       } else {
         await widget.service.updateItem(widget.item!.id!, newItem);
       }
-      if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-        setState(() => _isLoading = false);
-      }
+      debugPrint('Firestore error: $e');
     }
   }
 
@@ -88,80 +83,149 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
     return null;
   }
 
+  Widget _buildField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    TextCapitalization capitalization = TextCapitalization.none,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFFFFD600),
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          validator: validator,
+          textCapitalization: capitalization,
+          style: const TextStyle(color: Colors.white, fontSize: 15),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: const Color(0xFFFFD600), size: 20),
+            filled: true,
+            fillColor: const Color(0xFF1E1E1E),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: Color(0xFF333333)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide:
+                  const BorderSide(color: Color(0xFFFFD600), width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: Colors.redAccent),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: Colors.redAccent),
+            ),
+            errorStyle: const TextStyle(color: Colors.redAccent),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.item != null;
     return Scaffold(
+      backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
-        title: Text(isEdit ? 'Edit Item' : 'Add Item'),
+        backgroundColor: const Color(0xFF1A1A1A),
+        foregroundColor: Colors.white,
+        title: Text(
+          isEdit ? 'EDIT ITEM' : 'NEW ITEM',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 3,
+            color: Color(0xFFFFD600),
+          ),
+        ),
         centerTitle: true,
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: Color(0xFF333333)),
+        ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
-              TextFormField(
+              _buildField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Item Name',
-                  prefixIcon: Icon(Icons.label_outline),
-                  border: OutlineInputBorder(),
-                ),
+                label: 'ITEM NAME',
+                icon: Icons.inventory_2_outlined,
                 validator: _validateNotEmpty,
-                textCapitalization: TextCapitalization.words,
+                capitalization: TextCapitalization.words,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
+              const SizedBox(height: 20),
+              _buildField(
                 controller: _categoryController,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  prefixIcon: Icon(Icons.category_outlined),
-                  border: OutlineInputBorder(),
-                ),
+                label: 'CATEGORY',
+                icon: Icons.category_outlined,
                 validator: _validateNotEmpty,
-                textCapitalization: TextCapitalization.words,
+                capitalization: TextCapitalization.words,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _quantityController,
-                decoration: const InputDecoration(
-                  labelText: 'Quantity',
-                  prefixIcon: Icon(Icons.numbers),
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                validator: _validateQuantity,
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildField(
+                      controller: _quantityController,
+                      label: 'QUANTITY',
+                      icon: Icons.pin_outlined,
+                      keyboardType: TextInputType.number,
+                      validator: _validateQuantity,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildField(
+                      controller: _priceController,
+                      label: 'PRICE (\$)',
+                      icon: Icons.attach_money,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                      validator: _validatePrice,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _priceController,
-                decoration: const InputDecoration(
-                  labelText: 'Price (\$)',
-                  prefixIcon: Icon(Icons.attach_money),
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                validator: _validatePrice,
-              ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 36),
               SizedBox(
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _submit,
-                  icon: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(isEdit ? Icons.save : Icons.add),
-                  label: Text(isEdit ? 'Save Changes' : 'Add Item'),
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo,
-                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(0xFFFFD600),
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  child: Text(
+                    isEdit ? 'SAVE CHANGES' : 'ADD ITEM',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
+                      letterSpacing: 2,
+                    ),
                   ),
                 ),
               ),
